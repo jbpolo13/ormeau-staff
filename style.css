@@ -826,3 +826,208 @@ html, body {
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
 }
+
+
+/* ============================================================
+   IPHONE — FIX COMPLET SAFARI
+   ============================================================ */
+
+/* Variables safe area */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+html {
+  height: -webkit-fill-available;
+  height: 100dvh;
+}
+
+body {
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+}
+
+.app {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  max-width: 560px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+/* Header — respecte la barre de statut */
+.app-header {
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  top: auto !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  padding-top: calc(var(--sat) + 8px) !important;
+  height: auto !important;
+  min-height: calc(var(--header-height) + var(--sat)) !important;
+  z-index: 50 !important;
+}
+
+/* Zone de scroll — entre header et nav */
+.app-main {
+  flex: 1 1 auto !important;
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+/* Nav bas — respecte le home indicator iPhone */
+.bottom-nav {
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  bottom: auto !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: var(--nav-height) !important;
+  padding-bottom: calc(var(--sab) + 4px) !important;
+  z-index: 50 !important;
+}
+
+/* Pages — padding suffisant */
+.page {
+  padding: 16px 14px 40px !important;
+  min-height: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Login — plein écran */
+.login-screen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding-top: var(--sat) !important;
+  padding-bottom: var(--sab) !important;
+}
+
+/* Toast au dessus de la nav */
+.toast {
+  bottom: calc(var(--nav-height) + var(--sab) + 16px) !important;
+  z-index: 1000 !important;
+}
+
+/* Modal */
+.modal {
+  z-index: 500 !important;
+}
+.modal-card {
+  max-height: calc(100dvh - var(--sat) - 40px) !important;
+  padding-bottom: var(--sab) !important;
+}
+
+/* Notif panel */
+.notif-panel {
+  top: calc(var(--header-height) + var(--sat)) !important;
+  z-index: 200 !important;
+  right: var(--sar) !important;
+}
+
+/* Empêche le zoom sur inputs iPhone */
+input, select, textarea {
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100% !important;
+}
+
+/* Touch meilleur */
+button, a, .nav-btn, .user-btn, .filter-btn {
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+}
+
+/* Nav buttons plus grands */
+.nav-btn {
+  min-height: 54px !important;
+  padding: 8px 2px !important;
+  font-size: 9px !important;
+}
+
+/* Cards bien espacées */
+.card-section {
+  border-radius: 14px !important;
+  margin-bottom: 12px !important;
+}
+
+/* Quick actions bien visibles */
+.quick-actions {
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+.quick-btn {
+  border-radius: 14px !important;
+  min-height: 80px !important;
+  padding: 12px 6px !important;
+}
+
+.quick-icon {
+  font-size: 24px !important;
+  margin-bottom: 2px !important;
+}
+
+/* Checklist items bien touchables */
+.checklist-item {
+  min-height: 56px !important;
+  padding: 14px 16px !important;
+  margin-bottom: 6px !important;
+  border-radius: 12px !important;
+  background: var(--white) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.checklist-cb {
+  width: 32px !important;
+  height: 32px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Message items */
+.message-item {
+  border-radius: 12px !important;
+  padding: 14px !important;
+  margin-bottom: 10px !important;
+}
+
+/* User buttons login */
+.user-btn {
+  min-height: 64px !important;
+  border-radius: 14px !important;
+}
+
+/* Rapport cards */
+.rapport-card {
+  border-radius: 14px !important;
+  margin-bottom: 16px !important;
+}

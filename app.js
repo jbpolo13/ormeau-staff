@@ -472,6 +472,24 @@ function initApp() {
   else showPage('staff-dashboard');
   setInterval(checkReminders,60000);
   if('Notification'in window&&Notification.permission==='default') Notification.requestPermission();
+  // Archiver automatiquement les anciens rapports mal catégorisés
+  setTimeout(archiveOldRapports, 2000);
+}
+
+async function archiveOldRapports() {
+  // Archiver les staffMessages qui sont des rapports (anciens format)
+  const toArchive = DB.staffMessages.filter(m =>
+    !m.archived &&
+    m.content && (
+      m.content.includes('RAPPORT CHEF') ||
+      m.type === 'passation' && m.content.includes('Date :')
+    )
+  );
+  for(const m of toArchive) {
+    try {
+      await updateDoc(doc(db,'staffMessages',m.id), {archived: true});
+    } catch(e) {}
+  }
 }
 
 function updateHeaderDate() {
@@ -1632,6 +1650,19 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Fix hauteur iPhone — recalcule quand Safari affiche/cache ses barres
+  function fixHeight() {
+    const app = document.querySelector('.app');
+    if(app) {
+      app.style.height = window.innerHeight + 'px';
+    }
+  }
+  fixHeight();
+  window.addEventListener('resize', fixHeight);
+  window.addEventListener('orientationchange', () => setTimeout(fixHeight, 300));
+  // iOS Safari — déclenche quand les barres du navigateur apparaissent/disparaissent
+  window.visualViewport?.addEventListener('resize', fixHeight);
+
   // Afficher le loader pendant le chargement
   const userList = document.getElementById('user-list');
   if(userList) userList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray);font-size:13px">Chargement...</div>';
@@ -1720,3 +1751,4 @@ window.openEditSupplier   = openEditSupplier;
 window.saveEditSupplier   = saveEditSupplier;
 window.renderDashboardTeam= renderDashboardTeam;
 window.renderDashboard    = renderDashboard;
+window.archiveOldRapports = archiveOldRapports;

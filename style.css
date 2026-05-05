@@ -583,3 +583,207 @@ input, select, textarea {
     bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 12px);
   }
 }
+
+/* ============================================================
+   RAPPORTS CHEF — cartes visuelles
+   ============================================================ */
+
+.rapport-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  border-top: 4px solid var(--gold);
+}
+
+.rapport-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.rapport-icon { font-size: 24px; flex-shrink: 0; }
+
+.rapport-title-block { flex: 1; }
+
+.rapport-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--green-dark);
+}
+
+.rapport-meta {
+  font-size: 12px;
+  color: var(--gray);
+  margin-top: 2px;
+}
+
+.rapport-stats {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.rapport-stat-big {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--green-dark);
+  line-height: 1;
+}
+
+.rapport-stat-small {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 2px;
+}
+
+.rapport-progress {
+  height: 4px;
+  background: var(--cream-dark);
+  margin: 0 16px 14px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rapport-progress-bar {
+  height: 100%;
+  background: var(--green-light);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.rapport-section {
+  padding: 0 16px 12px;
+}
+
+.rapport-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gray);
+  margin-bottom: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cream-dark);
+}
+
+.rapport-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--cream);
+}
+
+.rapport-item:last-child { border-bottom: none; }
+
+.rapport-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rapport-item.done .rapport-check {
+  background: var(--green-light);
+  color: white;
+}
+
+.rapport-item.missing .rapport-check {
+  background: var(--cream-dark);
+  color: var(--gray);
+}
+
+.rapport-item-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--black);
+}
+
+.rapport-item.missing .rapport-item-text {
+  color: var(--gray);
+  text-decoration: line-through;
+}
+
+.rapport-item-meta {
+  font-size: 11px;
+  color: var(--green-mid);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   SCROLL iPhone — Fix définitif
+   ============================================================ */
+
+/* Désactiver les overrides précédents qui causaient des conflits */
+html, body {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.app {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  max-width: 560px !important;
+  margin: 0 auto !important;
+}
+
+.app-header {
+  flex-shrink: 0 !important;
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+}
+
+.app-main {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+
+.bottom-nav {
+  flex-shrink: 0 !important;
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  padding-bottom: max(env(safe-area-inset-bottom), 8px) !important;
+}
+
+.page {
+  padding: 16px 14px 32px !important;
+  min-height: auto !important;
+}
+
+/* Double validation chef */
+.checklist-cb.chef-checked {
+  background: var(--gold) !important;
+  border-color: var(--gold) !important;
+  color: var(--green-dark) !important;
+}
+
+/* Chef dans liste connexion */
+.chef-user-btn { border: 2px solid var(--gold) !important; }

@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a3a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="L'Ormeau" />
+  <title>Café de l'Ormeau</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== ÉCRAN DE CONNEXION ===== -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-leaf">❧</span>
+      <h1>Café de l'Ormeau</h1>
+      <p>Espace équipe</p>
+    </div>
+    <div id="login-step-1">
+      <p class="login-label">Qui êtes-vous ?</p>
+      <div class="login-users" id="user-list"></div>
+    </div>
+    <div id="login-step-2" class="hidden">
+      <div class="login-back" onclick="backToStep1()">← Retour</div>
+      <div class="login-selected-user" id="login-selected-name"></div>
+      <div id="login-create-pwd" class="hidden">
+        <p class="login-label">Créez votre mot de passe</p>
+        <input type="password" id="pwd-create" class="login-input" placeholder="Choisissez un mot de passe" />
+        <input type="password" id="pwd-confirm" class="login-input" placeholder="Confirmez le mot de passe" />
+        <button class="btn-login" onclick="createPassword()">Créer mon mot de passe</button>
+      </div>
+      <div id="login-enter-pwd" class="hidden">
+        <p class="login-label">Entrez votre mot de passe</p>
+        <input type="password" id="pwd-enter" class="login-input" placeholder="Mot de passe" />
+        <button class="btn-login" onclick="checkPassword()">Se connecter</button>
+        <p class="login-error hidden" id="login-error">Mot de passe incorrect</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APPLICATION ===== -->
+<div id="app" class="app hidden">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="header-logo">❧</span>
+      <div class="header-title">
+        <span class="header-name">L'Ormeau</span>
+        <span class="header-date" id="header-date"></span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="notif-bell" onclick="toggleNotifPanel()" id="notif-bell">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-dot hidden" id="notif-dot"></span>
+      </div>
+      <div class="current-user" onclick="logout()">
+        <span class="user-badge" id="current-user-badge">JB</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAV BAS — direction -->
+  <nav class="bottom-nav" id="nav-direction">
+    <button class="nav-btn active" data-page="dashboard" onclick="showPage('dashboard')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <span>Tableau</span>
+    </button>
+    <button class="nav-btn" data-page="messages" onclick="showPage('messages')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Messages</span>
+      <span class="nav-badge hidden" id="msg-badge">0</span>
+    </button>
+    <button class="nav-btn" data-page="tasks" onclick="showPage('tasks')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Tâches</span>
+    </button>
+    <button class="nav-btn" data-page="staff" onclick="showPage('staff')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Staff</span>
+      <span class="nav-badge hidden" id="staff-badge">0</span>
+    </button>
+    <button class="nav-btn" data-page="suppliers" onclick="showPage('suppliers')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <span>Liens</span>
+    </button>
+    <button class="nav-btn" data-page="history" onclick="showPage('history')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Historique</span>
+    </button>
+  </nav>
+
+  <!-- NAV BAS — staff -->
+  <nav class="bottom-nav hidden" id="nav-staff">
+    <button class="nav-btn active" data-page="staff-dashboard" onclick="showPage('staff-dashboard')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <span>Mon shift</span>
+    </button>
+    <button class="nav-btn" data-page="staff-checklist" onclick="showPage('staff-checklist')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Checklist</span>
+    </button>
+    <button class="nav-btn" data-page="staff-messages" onclick="showPage('staff-messages')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Messages</span>
+    </button>
+    <button class="nav-btn" data-page="staff-planning" onclick="showPage('staff-planning')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Planning</span>
+    </button>
+  </nav>
+
+  <!-- PAGES -->
+  <main class="app-main">
+
+    <!-- ===== DASHBOARD DIRECTION ===== -->
+    <section id="page-dashboard" class="page active">
+
+      <!-- Avatar + bonjour -->
+      <div class="avatar-header" id="avatar-header"></div>
+
+      <!-- Rappels urgents -->
+      <div id="urgent-reminders" class="card-section card-red hidden">
+        <div class="section-title urgent"><span class="dot-red"></span> Rappels en attente</div>
+        <div id="urgent-reminders-list"></div>
+      </div>
+
+      <!-- Équipe du jour -->
+      <div class="card-section card-team">
+        <div class="section-title">
+          <span>👥 Équipe aujourd'hui</span>
+          <button class="link-btn" onclick="openModal('modal-chef-roles')">👑 Désigner</button>
+        </div>
+        <div id="dashboard-team"></div>
+      </div>
+
+      <!-- Actions rapides -->
+      <div class="quick-actions">
+        <button class="quick-btn quick-btn-green" onclick="openNewMessage()">
+          <span class="quick-icon">✉</span>
+          <span>Message</span>
+        </button>
+        <button class="quick-btn quick-btn-gold" onclick="openNewTask()">
+          <span class="quick-icon">✓</span>
+          <span>Tâche</span>
+        </button>
+        <button class="quick-btn quick-btn-blue" onclick="openNewReminder()">
+          <span class="quick-icon">⏰</span>
+          <span>Rappel</span>
+        </button>
+        <button class="quick-btn quick-btn-purple" onclick="showPage('staff')">
+          <span class="quick-icon">👤</span>
+          <span>Staff</span>
+        </button>
+      </div>
+
+      <!-- Messages récents -->
+      <div class="card-section card-blue">
+        <div class="card-section-header blue">
+          <span class="card-icon">✉</span>
+          <span class="card-title">Messages</span>
+          <button class="link-btn-white" onclick="showPage('messages')">Voir tout →</button>
+        </div>
+        <div id="dashboard-messages"><div class="empty-state-sm">Aucun message récent</div></div>
+      </div>
+
+      <!-- Tâches du jour -->
+      <div class="card-section card-green">
+        <div class="card-section-header green">
+          <span class="card-icon">✓</span>
+          <span class="card-title">Tâches du jour</span>
+          <button class="link-btn-white" onclick="showPage('tasks')">Voir tout →</button>
+        </div>
+        <div id="dashboard-tasks"><div class="empty-state-sm">Aucune tâche aujourd'hui</div></div>
+      </div>
+
+      <!-- Commandes -->
+      <div class="card-section card-gold">
+        <div class="card-section-header gold">
+          <span class="card-icon">🛒</span>
+          <span class="card-title">Commandes à faire</span>
+          <button class="link-btn-white" onclick="showPage('suppliers')">Voir tout →</button>
+        </div>
+        <div id="dashboard-suppliers"><div class="empty-state-sm">Aucune commande aujourd'hui</div></div>
+      </div>
+
+      <!-- Rappels -->
+      <div class="card-section card-orange">
+        <div class="card-section-header orange">
+          <span class="card-icon">⏰</span>
+          <span class="card-title">Rappels du jour</span>
+        </div>
+        <div id="dashboard-reminders"><div class="empty-state-sm">Aucun rappel</div></div>
+      </div>
+
+      <!-- Requêtes staff -->
+      <div class="card-section card-purple" id="staff-requests-card">
+        <div class="card-section-header purple">
+          <span class="card-icon">👤</span>
+          <span class="card-title">Requêtes staff</span>
+          <button class="link-btn-white" onclick="showPage('staff')">Voir tout →</button>
+        </div>
+        <div id="dashboard-staff-requests"><div class="empty-state-sm">Aucune requête</div></div>
+      </div>
+
+    </section>
+
+    <!-- ===== MESSAGES DIRECTION ===== -->
+    <section id="page-messages" class="page">
+      <div class="page-header">
+        <h2>Messages</h2>
+        <button class="btn-primary" onclick="openNewMessage()">+ Nouveau</button>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterMessages('all',this)">Tous</button>
+        <button class="filter-btn" onclick="filterMessages('unread',this)">Non lus</button>
+        <button class="filter-btn" onclick="filterMessages('mine',this)">Reçus</button>
+        <button class="filter-btn" onclick="filterMessages('archived',this)">Archivés</button>
+      </div>
+      <div id="messages-list"></div>
+    </section>
+
+    <!-- ===== TÂCHES DIRECTION ===== -->
+    <section id="page-tasks" class="page">
+      <div class="page-header">
+        <h2>Tâches</h2>
+        <button class="btn-primary" onclick="openNewTask()">+ Nouvelle</button>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterTasks('today',this)">Aujourd'hui</button>
+        <button class="filter-btn" onclick="filterTasks('all',this)">Toutes</button>
+        <button class="filter-btn" onclick="filterTasks('urgent',this)">Urgentes</button>
+        <button class="filter-btn" onclick="filterTasks('mine',this)">Mes tâches</button>
+      </div>
+      <div id="tasks-list"></div>
+    </section>
+
+    <!-- ===== STAFF ===== -->
+    <section id="page-staff" class="page">
+      <div class="page-header">
+        <h2>Staff</h2>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterStaff('requests',this)">Requêtes</button>
+        <button class="filter-btn" onclick="filterStaff('planning',this)">Planning</button>
+        <button class="filter-btn" onclick="filterStaff('checklists',this)">Checklists</button>
+        <button class="filter-btn" onclick="filterStaff('equipe',this)">Équipe</button>
+      </div>
+      <div id="staff-list"></div>
+    </section>
+
+    <!-- ===== LIENS ===== -->
+    <section id="page-suppliers" class="page">
+      <div class="page-header">
+        <h2>Liens utiles</h2>
+        <button class="btn-primary" onclick="openNewSupplier()">+ Ajouter</button>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterSuppliers('all',this)">Tous</button>
+        <button class="filter-btn" onclick="filterSuppliers('fournisseurs',this)">Fournisseurs</button>
+        <button class="filter-btn" onclick="filterSuppliers('direction',this)">Direction</button>
+        <button class="filter-btn" onclick="filterSuppliers('documents',this)">Documents</button>
+      </div>
+      <div id="suppliers-list"></div>
+    </section>
+
+    <!-- ===== HISTORIQUE DIRECTION ===== -->
+    <section id="page-history" class="page">
+      <div class="page-header"><h2>Historique</h2></div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterHistory('all',this)">Tout</button>
+        <button class="filter-btn" onclick="filterHistory('tasks',this)">Tâches</button>
+        <button class="filter-btn" onclick="filterHistory('messages',this)">Messages</button>
+        <button class="filter-btn" onclick="filterHistory('reminders',this)">Rappels</button>
+        <button class="filter-btn" onclick="filterHistory('checklist',this)">Checklists</button>
+      </div>
+      <div id="history-list"></div>
+    </section>
+
+    <!-- ===== STAFF DASHBOARD ===== -->
+    <section id="page-staff-dashboard" class="page">
+      <div class="avatar-header" id="staff-avatar-header"></div>
+      <div class="card-section">
+        <div class="section-title">Mon planning cette semaine</div>
+        <div id="staff-week-planning"></div>
+      </div>
+      <div class="card-section">
+        <div class="section-title">Checklist du jour</div>
+        <div id="staff-today-checklist"></div>
+        <button class="fab-inline" onclick="showPage('staff-checklist')">Voir la checklist complète →</button>
+      </div>
+      <div class="card-section">
+        <div class="section-title">Messages de la direction</div>
+        <div id="staff-dir-messages"><div class="empty-state-sm">Aucun message</div></div>
+      </div>
+    </section>
+
+    <!-- ===== STAFF CHECKLIST ===== -->
+    <section id="page-staff-checklist" class="page">
+      <div class="page-header"><h2>Checklist</h2></div>
+      <div class="filter-bar">
+        <button class="filter-btn active" id="cl-btn-matin-ouverture" onclick="filterChecklist('matin-ouverture',this)">🌅 Ouv. Matin</button>
+        <button class="filter-btn" id="cl-btn-matin-fermeture" onclick="filterChecklist('matin-fermeture',this)">☀️ Ferm. Midi</button>
+        <button class="filter-btn" id="cl-btn-soir-ouverture" onclick="filterChecklist('soir-ouverture',this)">🌆 Ouv. Soir</button>
+        <button class="filter-btn" id="cl-btn-soir-fermeture" onclick="filterChecklist('soir-fermeture',this)">🌙 Ferm. Soir</button>
+        <button class="filter-btn" onclick="filterChecklist('passation',this)">📋 Passation</button>
+      </div>
+      <div id="checklist-list"></div>
+      <div id="passation-form" class="hidden">
+        <div class="card-section">
+          <div class="section-title">Passation entre équipes</div>
+          <div class="form-group">
+            <label>Message pour l'équipe suivante</label>
+            <textarea id="passation-msg" placeholder="Informations importantes..." rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Tâches non effectuées</label>
+            <textarea id="passation-tasks" placeholder="Lister les tâches non faites..." rows="2"></textarea>
+          </div>
+          <button class="btn-primary" style="width:100%;margin-top:8px" onclick="submitPassation()">Envoyer la passation</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== STAFF MESSAGES ===== -->
+    <section id="page-staff-messages" class="page">
+      <div class="page-header">
+        <h2>Messages</h2>
+        <button class="btn-primary" onclick="openStaffMessage()">+ Envoyer</button>
+      </div>
+      <div id="staff-messages-list"></div>
+    </section>
+
+    <!-- ===== STAFF PLANNING ===== -->
+    <section id="page-staff-planning" class="page">
+      <div class="page-header"><h2>Planning</h2></div>
+      <div id="full-planning-view"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== MODALES ===== -->
+
+<!-- Modal message direction -->
+<div id="modal-message" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-message')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Nouveau message</h3><button class="modal-close" onclick="closeModal('modal-message')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Pour</label>
+        <select id="msg-to">
+          <!-- Rempli dynamiquement par buildMessageRecipients() -->
+        </select>
+      </div>
+      <div class="form-group"><label>Message</label><textarea id="msg-content" placeholder="Votre message..." rows="4"></textarea></div>
+      <div class="form-group"><label>Priorité</label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="msg-priority" value="normal" checked> Normal</label>
+          <label class="radio-label"><input type="radio" name="msg-priority" value="urgent"> Urgent</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-message')">Annuler</button>
+      <button class="btn-primary" onclick="saveMessage()">Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal tâche -->
+<div id="modal-task" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-task')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Nouvelle tâche</h3><button class="modal-close" onclick="closeModal('modal-task')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Titre *</label><input type="text" id="task-title" placeholder="Ex : Commande Covadis" /></div>
+      <div class="form-group"><label>Description</label><textarea id="task-desc" placeholder="Détails..." rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Responsable</label>
+          <select id="task-assignee"><option value="jb">JB</option><option value="directeur">Directeur</option><option value="both">Les deux</option></select>
+        </div>
+        <div class="form-group"><label>Priorité</label>
+          <select id="task-priority"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="low">Basse</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Fréquence</label>
+          <select id="task-freq" onchange="toggleDayPicker()">
+            <option value="once">Une fois</option><option value="daily">Quotidien</option>
+            <option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option>
+          </select>
+        </div>
+        <div class="form-group" id="task-day-group" style="display:none"><label>Jour</label>
+          <select id="task-day">
+            <option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option>
+            <option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Heure limite</label><input type="time" id="task-time" /></div>
+        <div class="form-group"><label>Lien utile</label><input type="url" id="task-link" placeholder="https://..." /></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-task')">Annuler</button>
+      <button class="btn-primary" onclick="saveTask()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal rappel -->
+<div id="modal-reminder" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-reminder')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Nouveau rappel</h3><button class="modal-close" onclick="closeModal('modal-reminder')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Titre *</label><input type="text" id="reminder-title" placeholder="Ex : Appeler technicien" /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Date</label><input type="date" id="reminder-date" /></div>
+        <div class="form-group"><label>Heure</label><input type="time" id="reminder-time" /></div>
+      </div>
+      <div class="form-group"><label>Répéter</label>
+        <select id="reminder-freq"><option value="once">Une fois</option><option value="daily">Chaque jour</option><option value="weekly">Chaque semaine</option></select>
+      </div>
+      <div class="form-group"><label>Note</label><textarea id="reminder-note" placeholder="Détails..." rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-reminder')">Annuler</button>
+      <button class="btn-primary" onclick="saveReminder()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal fournisseur -->
+<div id="modal-supplier" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-supplier')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Nouveau lien</h3><button class="modal-close" onclick="closeModal('modal-supplier')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Nom *</label><input type="text" id="sup-name" placeholder="Ex : Covadis" /></div>
+      <div class="form-group"><label>Description</label><input type="text" id="sup-desc" placeholder="Ex : Boissons et épicerie" /></div>
+      <div class="form-group"><label>URL *</label><input type="url" id="sup-url" placeholder="https://..." /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Jours commande</label><input type="text" id="sup-days" placeholder="Ex : Lun, Mer" /></div>
+        <div class="form-group"><label>Responsable</label>
+          <select id="sup-assignee"><option value="jb">JB</option><option value="directeur">Directeur</option><option value="both">Les deux</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="sup-category">
+          <option value="fournisseurs">Fournisseur</option>
+          <option value="direction">Direction</option>
+          <option value="documents">Document</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-supplier')">Annuler</button>
+      <button class="btn-primary" onclick="saveSupplier()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal message staff -->
+<div id="modal-staff-message" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-staff-message')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Message à la direction</h3><button class="modal-close" onclick="closeModal('modal-staff-message')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Type</label>
+        <select id="staff-msg-type">
+          <option value="info">Information (ex: stock bas)</option>
+          <option value="request">Requête planning</option>
+          <option value="problem">Problème urgent</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Message *</label><textarea id="staff-msg-content" placeholder="Ex: Il reste 1 brique de lait..." rows="4"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-staff-message')">Annuler</button>
+      <button class="btn-primary" onclick="saveStaffMessage()">Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal réponse -->
+<div id="modal-reply" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-reply')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Répondre</h3><button class="modal-close" onclick="closeModal('modal-reply')">✕</button></div>
+    <div class="modal-body">
+      <div id="reply-original" class="reply-original"></div>
+      <div class="form-group"><label>Votre réponse</label><textarea id="reply-content" placeholder="..." rows="3"></textarea></div>
+      <input type="hidden" id="reply-to-id" />
+      <input type="hidden" id="reply-collection" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-reply')">Annuler</button>
+      <button class="btn-primary" onclick="sendReply()">Répondre</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal chef de shift -->
+<div id="modal-chef" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-chef')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3 id="chef-modal-title">👑 Chef de shift</h3><button class="modal-close" onclick="closeModal('modal-chef')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--gray);margin-bottom:16px">Choisissez le responsable :</p>
+      <div id="chef-select-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal choisir quel rôle assigner -->
+<div id="modal-chef-roles" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-chef-roles')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>👑 Désigner un chef</h3><button class="modal-close" onclick="closeModal('modal-chef-roles')">✕</button></div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="user-btn direction-btn" onclick="closeModal('modal-chef-roles');openAssignChef('matin-ouverture')">
+          <span style="font-size:20px">🌅</span>
+          <div><span class="user-name">Chef mise en place matin</span><span class="user-role">Shift du matin</span></div>
+        </button>
+        <button class="user-btn direction-btn" onclick="closeModal('modal-chef-roles');openAssignChef('matin-fermeture')">
+          <span style="font-size:20px">☀️</span>
+          <div><span class="user-name">Chef fermeture midi</span><span class="user-role">Shift du matin</span></div>
+        </button>
+        <button class="user-btn direction-btn" onclick="closeModal('modal-chef-roles');openAssignChef('soir-ouverture')">
+          <span style="font-size:20px">🌆</span>
+          <div><span class="user-name">Chef mise en place soir</span><span class="user-role">Shift du soir</span></div>
+        </button>
+        <button class="user-btn direction-btn" onclick="closeModal('modal-chef-roles');openAssignChef('soir-fermeture')">
+          <span style="font-size:20px">🌙</span>
+          <div><span class="user-name">Chef fermeture soir</span><span class="user-role">Shift du soir</span></div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ajout utilisateur -->
+<div id="modal-add-user" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-add-user')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Nouvel employé</h3><button class="modal-close" onclick="closeModal('modal-add-user')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Prénom *</label><input type="text" id="new-user-name" placeholder="Ex : Marie" /></div>
+      <div class="form-group"><label>Rôle *</label>
+        <select id="new-user-role" onchange="toggleNewUserRole()">
+          <option value="staff">Staff</option>
+          <option value="direction">Direction</option>
+        </select>
+      </div>
+      <div id="new-user-staff-fields">
+        <div class="form-group"><label>Poste</label>
+          <select id="new-user-poste">
+            <option value="Salle">Salle</option>
+            <option value="Bar">Bar</option>
+            <option value="Runner">Runner</option>
+            <option value="Cuisine">Cuisine</option>
+            <option value="Extra">Extra</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Planning hebdomadaire</label>
+          <div id="new-user-planning"></div>
+        </div>
+      </div>
+      <div id="new-user-direction-fields" class="hidden">
+        <div class="form-group"><label>Titre</label>
+          <input type="text" id="new-user-title" placeholder="Ex : Responsable de salle" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-add-user')">Annuler</button>
+      <button class="btn-primary" onclick="saveNewUser()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition profil employé -->
+<div id="modal-edit-user" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-edit-user')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Éditer le profil</h3><button class="modal-close" onclick="closeModal('modal-edit-user')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-user-id" />
+      <div class="form-group"><label>Prénom</label><input type="text" id="edit-user-name" /></div>
+      <div class="form-group"><label>Poste</label>
+        <select id="edit-user-poste">
+          <option value="Salle">Salle</option>
+          <option value="Bar">Bar</option>
+          <option value="Runner">Runner</option>
+          <option value="Cuisine">Cuisine</option>
+          <option value="Extra">Extra</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Planning de base</label>
+        <div id="edit-user-planning"></div>
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <div id="edit-user-pwd-status" style="font-size:13px;color:var(--gray);margin-bottom:8px"></div>
+        <button class="btn-secondary" style="width:100%" onclick="resetUserPassword()">🔑 Réinitialiser le mot de passe</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-edit-user')">Annuler</button>
+      <button class="btn-primary" onclick="saveEditUser()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition fournisseur -->
+<div id="modal-edit-supplier" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('modal-edit-supplier')"></div>
+  <div class="modal-card">
+    <div class="modal-header"><h3>Modifier le lien</h3><button class="modal-close" onclick="closeModal('modal-edit-supplier')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-sup-id" />
+      <div class="form-group"><label>Nom *</label><input type="text" id="edit-sup-name" /></div>
+      <div class="form-group"><label>Description</label><input type="text" id="edit-sup-desc" /></div>
+      <div class="form-group"><label>URL *</label><input type="url" id="edit-sup-url" placeholder="https://..." /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Jours commande</label><input type="text" id="edit-sup-days" placeholder="Ex : Lun, Mer" /></div>
+        <div class="form-group"><label>Responsable</label>
+          <select id="edit-sup-assignee">
+            <option value="jb">JB</option>
+            <option value="yohann">Yohann</option>
+            <option value="both">Les deux</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Catégorie</label>
+        <select id="edit-sup-category">
+          <option value="fournisseurs">Fournisseur</option>
+          <option value="direction">Direction</option>
+          <option value="documents">Document</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-edit-supplier')">Annuler</button>
+      <button class="btn-primary" onclick="saveEditSupplier()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<div id="notif-panel" class="notif-panel hidden">
+  <div class="notif-panel-header"><h4>Rappels</h4><button onclick="closeNotifPanel()">✕</button></div>
+  <div id="notif-panel-list"></div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

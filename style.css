@@ -444,3 +444,142 @@ a{color:inherit;text-decoration:none;}
   .nav-btn { font-size: 9px; }
   .task-item, .message-item { padding: 16px; }
 }
+
+/* ============================================================
+   OPTIMISATION iPHONE — layout fixe natif
+   ============================================================ */
+
+/* Structure principale — tout fixe, seul le contenu scroll */
+html, body {
+  height: 100%;
+  height: 100dvh; /* dynamic viewport height — clé pour iPhone */
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+.app {
+  height: 100dvh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* Header fixe en haut */
+.app-header {
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  flex-shrink: 0;
+  /* Padding pour la barre de statut iPhone */
+  padding-top: max(env(safe-area-inset-top), 0px);
+  height: calc(var(--header-height) + env(safe-area-inset-top));
+}
+
+/* Zone de contenu — seule partie qui scroll */
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  /* Empêche le scroll de déborder */
+  position: relative;
+}
+
+/* Nav bas fixe */
+.bottom-nav {
+  position: relative !important;
+  transform: none !important;
+  left: auto !important;
+  flex-shrink: 0;
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom));
+}
+
+/* Login screen — aussi fixe */
+.login-screen {
+  position: fixed !important;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pages — padding bottom pour ne pas être caché */
+.page {
+  padding-bottom: 24px !important;
+  min-height: auto !important;
+}
+
+/* Modales — plein écran sur iPhone */
+.modal-card {
+  max-height: calc(100dvh - 40px) !important;
+}
+
+/* Éviter le zoom sur les inputs iPhone */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+/* Tap highlight supprimé partout */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Boutons plus grands sur mobile */
+@media (max-width: 480px) {
+  .nav-btn {
+    padding: 10px 4px;
+    font-size: 9px;
+  }
+  .quick-btn {
+    padding: 16px 6px;
+    border-radius: 12px;
+  }
+  .quick-icon {
+    font-size: 22px;
+  }
+  .user-btn {
+    padding: 16px 18px;
+    min-height: 64px;
+  }
+  .checklist-item {
+    padding: 14px 16px;
+    min-height: 52px;
+  }
+  .checklist-cb {
+    width: 30px;
+    height: 30px;
+  }
+  .task-checkbox {
+    width: 28px;
+    height: 28px;
+  }
+  .btn-primary, .btn-secondary {
+    padding: 14px 20px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+  /* Cards dashboard plus compactes */
+  .card-section {
+    padding: 14px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+  }
+  .avatar-header {
+    border-radius: 12px;
+    padding: 16px;
+  }
+  /* Toast au dessus de la nav */
+  .toast {
+    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 12px);
+  }
+}

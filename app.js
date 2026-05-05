@@ -780,16 +780,33 @@ function renderDashboardTeam() {
     return;
   }
 
+  const shiftColors = {
+    'Matin':   'background:rgba(209,250,229,0.25);border:1px solid rgba(74,140,107,0.4)',
+    'Soir':    'background:rgba(219,234,254,0.25);border:1px solid rgba(59,130,246,0.4)',
+    'Coupure': 'background:rgba(252,231,243,0.25);border:1px solid rgba(157,23,77,0.4)',
+    '10H-18H': 'background:rgba(254,243,199,0.25);border:1px solid rgba(245,158,11,0.4)',
+  };
+  const shiftTextColors = {
+    'Matin':'#065f46','Soir':'#1e40af','Coupure':'#9d174d','10H-18H':'#92400e'
+  };
+  const todayRoles2 = getTodayRoles();
+  const chefIds2 = Object.values(todayRoles2);
+
   el.innerHTML = '<div class="team-day-grid">' + working.map(s => {
     const shift = weeklyPlanDoc?.[s.id]?.[today] || 'Off';
-    const isChef = todayChef?.userId === s.id;
-    return '<div class="team-member-chip">'
-      + '<div class="team-chip-avatar">' + (s.initials || getInitials(s.name)) + '</div>'
+    const isChef = chefIds2.includes(s.id);
+    const chefRolesForS = SHIFT_ROLES.filter(r=>todayRoles2[r.id]===s.id);
+    const chipStyle = shiftColors[shift] || 'background:rgba(255,255,255,0.1)';
+    const shiftStyle = 'color:'+(shiftTextColors[shift]||'rgba(245,240,232,0.6)')+';font-weight:600';
+    return '<div class="team-member-chip" style="'+chipStyle+'">'
+      + '<div class="team-chip-avatar" style="'+(isChef?'background:var(--gold);color:var(--green-dark)':'')+'">'
+        + (s.initials || getInitials(s.name))
+      + '</div>'
       + '<div>'
         + '<span class="team-chip-name">' + escHtml(s.name)
-          + (isChef ? '<span class="team-chef-badge">👑 Chef</span>' : '')
+          + (isChef ? ' <span class="team-chef-badge">👑</span>' : '')
         + '</span>'
-        + '<span class="team-chip-shift">' + shift + '</span>'
+        + '<span class="team-chip-shift" style="'+shiftStyle+'">' + shift + '</span>'
       + '</div>'
     + '</div>';
   }).join('') + '</div>';
@@ -1107,8 +1124,13 @@ function filterStaff(f,btn){document.querySelectorAll('#page-staff .filter-btn')
 function updateStaffBadge(){const unread=DB.staffMessages.filter(m=>!m.read&&!m.archived).length;const badge=document.getElementById('staff-badge');if(!badge)return;if(unread>0){badge.textContent=unread;badge.classList.remove('hidden');}else badge.classList.add('hidden');}
 
 function renderStaffRequests(el){
-  // Exclure les rapports de chef (passation) — ils ont leur propre section
-  const msgs=[...DB.staffMessages].filter(m=>!m.archived&&!m.deleted&&m.type!=='passation').reverse();
+  // Exclure TOUS les types rapport/passation
+  const msgs=[...DB.staffMessages].filter(m=>
+    !m.archived && !m.deleted &&
+    m.type !== 'passation' &&
+    m.type !== 'rapport' &&
+    !(m.content && m.content.includes('RAPPORT CHEF'))
+  ).reverse();
   if(!msgs.length){el.innerHTML='<div class="empty-state-sm" style="padding:20px;text-align:center">Aucune requête</div>';return;}
   el.innerHTML=msgs.map(m=>`<div class="request-item ${m.type==='problem'?'problem':m.type==='info'?'info':''}">
     <div class="request-header">
@@ -1286,25 +1308,36 @@ function renderChecklist(filter){
       const timeStr = doneAt ? new Date(doneAt).getHours()+':'+String(new Date(doneAt).getMinutes()).padStart(2,'0') : '';
       const chefTimeStr = chefAt ? new Date(chefAt).getHours()+':'+String(new Date(chefAt).getMinutes()).padStart(2,'0') : '';
 
-      // Couleur du bouton selon qui a validé
-      let cbClass = '';
-      let cbColor = '';
-      if(isChefDone) { cbClass='checked chef-checked'; cbColor='background:var(--gold);border-color:var(--gold);color:var(--green-dark)'; }
-      else if(isDone){ cbClass='checked'; cbColor=''; }
+      // Couleur selon état : vide → coché équipe (vert) → validé chef (or)
+      let cbClass='', cbStyle='', itemStyle='', textStyle='';
+      if(isChefDone) {
+        // Validé chef — doré + texte normal (pas grisé)
+        cbClass='checked chef-checked';
+        cbStyle='background:var(--gold);border-color:var(--gold);color:var(--green-dark)';
+        itemStyle='background:rgba(184,151,62,0.08);border-radius:10px;padding:12px 14px';
+        textStyle='color:var(--black);text-decoration:none;font-weight:500';
+      } else if(isDone) {
+        // Coché équipe — vert, texte légèrement atténué
+        cbClass='checked';
+        cbStyle='';
+        itemStyle='';
+        textStyle='color:var(--gray)';
+      }
 
-      html+=`<div class="checklist-item ${isDone?'done':''}">
-        <button class="checklist-cb ${cbClass}" style="${cbColor}" onclick="toggleChecklistItem('${key}','${currentCheckFilter}')">
+      html+=`<div class="checklist-item" style="${itemStyle}">
+        <button class="checklist-cb ${cbClass}" style="${cbStyle}" onclick="toggleChecklistItem('${key}','${currentCheckFilter}')">
           ${isDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}
         </button>
         <div style="flex:1">
-          <span class="checklist-text ${isDone?'done':''}">${escHtml(item)}</span>
+          <span class="checklist-text" style="${textStyle}">${escHtml(item)}</span>
           <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">
             ${isDone&&doneBy?`<span style="font-size:11px;color:var(--green-mid)">✓ ${getUserLabel(doneBy)}${timeStr?' · '+timeStr:''}</span>`:''}
-            ${isChefDone&&chefBy?`<span style="font-size:11px;color:var(--gold);font-weight:600">👑 ${getUserLabel(chefBy)}${chefTimeStr?' · '+chefTimeStr:''}</span>`:''}
+            ${isChefDone&&chefBy?`<span style="font-size:11px;color:var(--gold);font-weight:700">👑 ${getUserLabel(chefBy)}${chefTimeStr?' · '+chefTimeStr:''}</span>`:''}
           </div>
         </div>
-        ${amChef&&isDone&&!isChefDone?`<button onclick="toggleChecklistItem('${key}','${currentCheckFilter}',true)" style="font-size:11px;color:var(--gold);padding:4px 10px;background:rgba(184,151,62,.15);border-radius:6px;font-weight:600;white-space:nowrap">👑 OK</button>`:''}
-        ${amChef&&isChefDone?`<button onclick="toggleChecklistItem('${key}','${currentCheckFilter}',true)" style="font-size:11px;color:var(--gray);padding:4px 8px;background:var(--cream-dark);border-radius:6px">✕</button>`:''}
+        ${amChef&&isDone&&!isChefDone?`<button onclick="toggleChecklistItem('${key}','${currentCheckFilter}',true)" style="min-width:60px;font-size:13px;color:var(--green-dark);padding:8px 12px;background:var(--gold);border-radius:8px;font-weight:700;white-space:nowrap">✓ OK</button>`:''}
+        ${amChef&&isChefDone?`<button onclick="toggleChecklistItem('${key}','${currentCheckFilter}',true)" style="min-width:40px;font-size:11px;color:var(--gray);padding:6px 8px;background:var(--cream-dark);border-radius:6px">✕</button>`:''}
+        ${!amChef&&!isDone?'':''}
       </div>`;
     });
     html+='</div>';
@@ -1400,6 +1433,16 @@ async function validateShiftAsChef(roleId) {
     if(allChecked[sec.title+'-'+idx]) doneItems++;
   }));
 
+  // Stats par personne — qui a fait combien de tâches
+  const statsByPerson = {};
+  Object.values(allChecked).forEach(item=>{
+    if(item.doneBy) {
+      if(!statsByPerson[item.doneBy]) statsByPerson[item.doneBy]={count:0,name:getUserLabel(item.doneBy)};
+      statsByPerson[item.doneBy].count++;
+    }
+  });
+  const personStats = Object.values(statsByPerson).sort((a,b)=>b.count-a.count);
+
   // Construire données rapport structurées
   const rapportData = {
     role: role?.label||type,
@@ -1408,6 +1451,7 @@ async function validateShiftAsChef(roleId) {
     date: today,
     dureeMin,
     totalItems, doneItems,
+    personStats,
     sections: cl?.sections.map(sec=>({
       title: sec.title,
       items: sec.items.map((item,idx)=>{
@@ -1462,8 +1506,14 @@ function renderHistory(filter) {
     reportHtml='<div style="margin-bottom:12px">';
     reports.forEach(r=>{
       const t=r.validatedAt?.toDate?r.validatedAt.toDate():new Date(r.validatedAt||0);
-      const pct=r.totalItems?Math.round(r.doneItems/r.totalItems*100):0;
-      const duree=r.dureeMin?r.dureeMin+'min':'—';
+      // Calculer depuis les sections si totalItems manque (anciens rapports)
+      let totalItems = r.totalItems || 0;
+      let doneItems  = r.doneItems  || 0;
+      if(!totalItems && r.sections) {
+        r.sections.forEach(s=>{ totalItems+=s.items?.length||0; doneItems+=s.items?.filter(i=>i.done).length||0; });
+      }
+      const pct   = totalItems ? Math.round(doneItems/totalItems*100) : 0;
+      const duree = r.dureeMin ? r.dureeMin+'min' : '—';
 
       // Header rapport
       reportHtml+='<div class="rapport-card">'
@@ -1475,11 +1525,19 @@ function renderHistory(filter) {
           +'</div>'
           +'<div class="rapport-stats">'
             +'<div class="rapport-stat-big">'+pct+'%</div>'
-            +'<div class="rapport-stat-small">'+r.doneItems+'/'+r.totalItems+' tâches</div>'
+            +'<div class="rapport-stat-small">'+doneItems+'/'+totalItems+' tâches</div>'
             +'<div class="rapport-stat-small">⏱ '+duree+'</div>'
           +'</div>'
         +'</div>'
-        +'<div class="rapport-progress"><div class="rapport-progress-bar" style="width:'+pct+'%"></div></div>';
+        +'<div class="rapport-progress"><div class="rapport-progress-bar" style="width:'+pct+'%"></div></div>'
+      // Stats par personne
+      +(r.personStats&&r.personStats.length?
+        '<div style="padding:0 16px 12px;display:flex;gap:8px;flex-wrap:wrap">'
+        + r.personStats.map(p=>'<span style="font-size:12px;background:var(--cream);padding:4px 10px;border-radius:20px;color:var(--green-dark)">'
+          +'<strong>'+escHtml(p.name)+'</strong> · '+p.count+' tâches'
+        +'</span>').join('')
+        +'</div>'
+      :'');
 
       // Sections
       if(r.sections&&r.sections.length){

@@ -131,6 +131,7 @@ function formatDateTime(ts) {
 
 function getAllUsers() {
   const all = {...DIRECTION_USERS};
+  dynamicDirection.forEach(u=>{ all[u.id]=u; });
   dynamicStaff.forEach(s=>{ all[s.id]=s; });
   return all;
 }
@@ -298,12 +299,20 @@ async function onShiftChange(staffId, dayIndex, newShift) {
 // STAFF DYNAMIQUE
 // ============================================================
 
+let dynamicDirection = []; // direction ajoutée manuellement
+
 async function loadDynamicStaff() {
   try {
     const snap = await getDocs(collection(db,'staffProfiles'));
     dynamicStaff = snap.docs.map(d=>({...d.data(), id:d.id}));
   } catch(e) {
     dynamicStaff = [];
+  }
+  try {
+    const snap2 = await getDocs(collection(db,'directionProfiles'));
+    dynamicDirection = snap2.docs.map(d=>({...d.data(), id:d.id, isDirection:true}));
+  } catch(e) {
+    dynamicDirection = [];
   }
 }
 
@@ -331,10 +340,18 @@ async function initDefaultStaff() {
 function buildUserList() {
   const el = document.getElementById('user-list'); if(!el) return;
   let html = '<div class="section-divider">Direction</div>';
+  // Direction fixe
   Object.values(DIRECTION_USERS).forEach(u=>{
     html+=`<button class="user-btn direction-btn" onclick="selectUser('${u.id}')">
       <div class="user-avatar">${u.initials}</div>
       <div><span class="user-name">${u.name}</span><span class="user-role">${u.role}</span></div>
+    </button>`;
+  });
+  // Direction dynamique (ajoutée manuellement)
+  dynamicDirection.forEach(u=>{
+    html+=`<button class="user-btn direction-btn" onclick="selectUser('${u.id}')">
+      <div class="user-avatar">${u.initials||getInitials(u.name)}</div>
+      <div><span class="user-name">${u.name}</span><span class="user-role">${u.role||'Direction'}</span></div>
     </button>`;
   });
   html+='<div class="section-divider">Équipe</div>';
@@ -405,6 +422,7 @@ async function checkPassword() {
 
 function doLogin(userId) {
   currentUser=getAllUsers()[userId];
+  if(!currentUser){ showToast('Utilisateur introuvable'); return; }
   localStorage.setItem('ormeau_user',userId);
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
@@ -525,6 +543,11 @@ function attachListeners() {
   // Staff profiles en live
   onSnapshot(collection(db,'staffProfiles'),snap=>{
     dynamicStaff=snap.docs.map(d=>({...d.data(),id:d.id}));
+    buildUserList();
+  });
+  // Direction profiles en live
+  onSnapshot(collection(db,'directionProfiles'),snap=>{
+    dynamicDirection=snap.docs.map(d=>({...d.data(),id:d.id,isDirection:true}));
     buildUserList();
   });
 }

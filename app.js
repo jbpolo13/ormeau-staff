@@ -597,33 +597,62 @@ function renderChefBadge() {
 }
 
 // ============================================================
-// CHEF DE SHIFT
+// CHEF DE SHIFT — 4 rôles
 // ============================================================
 
-function openAssignChef() {
-  const today=todayDay();
-  const soirStaff=dynamicStaff.filter(s=>{
-    const shift=weeklyPlanDoc?.[s.id]?.[String(today)]||'Off';
-    return shift==='Soir'||shift==='Coupure';
+const SHIFT_ROLES = [
+  { id:'matin-ouverture', label:'Chef mise en place matin', shift:'Matin' },
+  { id:'matin-fermeture', label:'Chef fermeture midi',      shift:'Matin' },
+  { id:'soir-ouverture',  label:'Chef mise en place soir',  shift:'Soir'  },
+  { id:'soir-fermeture',  label:'Chef fermeture soir',      shift:'Soir'  },
+];
+
+let currentRoleToAssign = null;
+
+function openAssignChef(roleId) {
+  currentRoleToAssign = roleId || 'soir-fermeture';
+  const role = SHIFT_ROLES.find(r=>r.id===currentRoleToAssign);
+  const today = String(todayDay());
+  const eligible = dynamicStaff.filter(s=>{
+    const shift = weeklyPlanDoc?.[s.id]?.[today]||'Off';
+    if(!role) return shift!=='Off';
+    if(role.shift==='Matin') return shift==='Matin'||shift==='Coupure';
+    if(role.shift==='Soir')  return shift==='Soir'||shift==='Coupure';
+    return shift!=='Off';
   });
   const el=document.getElementById('chef-select-list'); if(!el) return;
-  el.innerHTML=soirStaff.map(s=>`
-    <button class="user-btn" style="margin-bottom:8px" onclick="setChefDeShift('${s.id}')">
+  const titleEl=document.getElementById('chef-modal-title');
+  if(titleEl) titleEl.textContent = role ? role.label : 'Chef de shift';
+  el.innerHTML = eligible.map(s=>`
+    <button class="user-btn" style="margin-bottom:8px" onclick="setChefRole('${s.id}')">
       <div class="user-avatar">${s.initials||getInitials(s.name)}</div>
       <div><span class="user-name">${s.name}</span><span class="user-role">${s.poste}</span></div>
     </button>`).join('');
-  if(!soirStaff.length) el.innerHTML='<div class="empty-state-sm">Aucun employé de soir aujourd\'hui</div>';
+  if(!eligible.length) el.innerHTML='<div class="empty-state-sm">Aucun employé disponible</div>';
   openModal('modal-chef');
 }
 
-async function setChefDeShift(userId) {
-  const today=todayStr();
-  const existing=DB.shiftChefs.find(c=>c.date===today);
-  if(existing) await deleteDoc(doc(db,'shiftChefs',existing.id));
-  await addDoc(COL.shiftChefs(),{userId,date:today,assignedBy:currentUser.id,createdAt:serverTimestamp()});
+async function setChefRole(userId) {
+  const today = todayStr();
+  const roleId = currentRoleToAssign || 'soir-fermeture';
+  const existing = (DB.shiftRoles||[]).find(r=>r.date===today&&r.roleId===roleId);
+  if(existing) await deleteDoc(doc(db,'shiftRoles',existing.id));
+  await addDoc(COL.shiftRoles(),{userId,roleId,date:today,assignedBy:currentUser.id,createdAt:serverTimestamp()});
   closeModal('modal-chef');
-  showToast(`${getUserLabel(userId)} est chef de shift ✓`);
+  showToast(getUserLabel(userId)+' désigné chef ✓');
 }
+
+async function setChefDeShift(userId){ await setChefRole(userId); }
+
+function getTodayRoles() {
+  const today = todayStr();
+  const roles = {};
+  (DB.shiftRoles||[]).filter(r=>r.date===today).forEach(r=>{ roles[r.roleId]=r.userId; });
+  return roles;
+}
+
+function isChefForRole(roleId) { return getTodayRoles()[roleId] === currentUser?.id; }
+function isAnyChef() { return Object.values(getTodayRoles()).includes(currentUser?.id); }
 
 // ============================================================
 // AJOUT UTILISATEUR
@@ -1453,17 +1482,67 @@ document.addEventListener('DOMContentLoaded', async () => {
   await restoreSession();
 });
 
-Object.assign(window,{
-  selectUser,backToStep1,createPassword,checkPassword,logout,showPage,
-  openNewMessage,saveMessage,filterMessages:filterMessages,markMsgRead,archiveMsg,deleteMsg,openReply,sendReply,
-  openNewTask,saveTask,filterTasks,toggleTask,quickToggleTask,deleteTask,toggleDayPicker,
-  openNewReminder,saveReminder,markReminderDone,
-  openNewSupplier,saveSupplier,deleteSupplier,filterSuppliers,
-  filterStaff,markStaffMsgRead,archiveStaffMsg,
-  openStaffMessage,saveStaffMessage,
-  filterChecklist,toggleChecklistItem,submitPassation,validateShiftAsChef,
-  openAssignChef,setChefDeShift,setChefRole,isAnyChef,isChefForRole,historyPrevDay,historyNextDay,validateShiftAsChef,
-  openAddUser,saveNewUser,deleteStaffMember,openEditUser,saveEditUser,resetUserPassword,toggleNewUserRole,
-  onShiftChange,
-  openModal,closeModal,toggleNotifPanel,closeNotifPanel,renderHistory,filterHistory,openEditSupplier,saveEditSupplier,renderDashboardTeam,deleteStaffMsg,renderDashboard
-});
+// Exposer TOUTES les fonctions au HTML
+window.selectUser         = selectUser;
+window.backToStep1        = backToStep1;
+window.createPassword     = createPassword;
+window.checkPassword      = checkPassword;
+window.logout             = logout;
+window.showPage           = showPage;
+window.openNewMessage     = openNewMessage;
+window.saveMessage        = saveMessage;
+window.filterMessages     = filterMessages;
+window.markMsgRead        = markMsgRead;
+window.archiveMsg         = archiveMsg;
+window.deleteMsg          = deleteMsg;
+window.openReply          = openReply;
+window.sendReply          = sendReply;
+window.openNewTask        = openNewTask;
+window.saveTask           = saveTask;
+window.filterTasks        = filterTasks;
+window.toggleTask         = toggleTask;
+window.quickToggleTask    = quickToggleTask;
+window.deleteTask         = deleteTask;
+window.toggleDayPicker    = toggleDayPicker;
+window.openNewReminder    = openNewReminder;
+window.saveReminder       = saveReminder;
+window.markReminderDone   = markReminderDone;
+window.openNewSupplier    = openNewSupplier;
+window.saveSupplier       = saveSupplier;
+window.deleteSupplier     = deleteSupplier;
+window.filterSuppliers    = filterSuppliers;
+window.filterStaff        = filterStaff;
+window.markStaffMsgRead   = markStaffMsgRead;
+window.archiveStaffMsg    = archiveStaffMsg;
+window.deleteStaffMsg     = deleteStaffMsg;
+window.openStaffMessage   = openStaffMessage;
+window.saveStaffMessage   = saveStaffMessage;
+window.filterChecklist    = filterChecklist;
+window.toggleChecklistItem= toggleChecklistItem;
+window.submitPassation    = submitPassation;
+window.validateShiftAsChef= validateShiftAsChef;
+window.openAssignChef     = openAssignChef;
+window.setChefRole        = setChefRole;
+window.setChefDeShift     = setChefDeShift;
+window.isAnyChef          = isAnyChef;
+window.isChefForRole      = isChefForRole;
+window.historyPrevDay     = historyPrevDay;
+window.historyNextDay     = historyNextDay;
+window.openAddUser        = openAddUser;
+window.saveNewUser        = saveNewUser;
+window.deleteStaffMember  = deleteStaffMember;
+window.openEditUser       = openEditUser;
+window.saveEditUser       = saveEditUser;
+window.resetUserPassword  = resetUserPassword;
+window.toggleNewUserRole  = toggleNewUserRole;
+window.onShiftChange      = onShiftChange;
+window.openModal          = openModal;
+window.closeModal         = closeModal;
+window.toggleNotifPanel   = toggleNotifPanel;
+window.closeNotifPanel    = closeNotifPanel;
+window.renderHistory      = renderHistory;
+window.filterHistory      = filterHistory;
+window.openEditSupplier   = openEditSupplier;
+window.saveEditSupplier   = saveEditSupplier;
+window.renderDashboardTeam= renderDashboardTeam;
+window.renderDashboard    = renderDashboard;

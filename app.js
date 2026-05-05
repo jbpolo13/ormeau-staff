@@ -355,12 +355,17 @@ function buildUserList() {
     </button>`;
   });
   html+='<div class="section-divider">Équipe</div>';
+  const todayRolesForList = getTodayRoles();
+  const chefIds = Object.values(todayRolesForList);
   dynamicStaff.forEach(s=>{
     const shift = getTodayShiftFromPlan(s.id);
-    html+=`<button class="user-btn" onclick="selectUser('${s.id}')">
-      <div class="user-avatar">${s.initials||getInitials(s.name)}</div>
+    const isChef = chefIds.includes(s.id);
+    const chefRoles = SHIFT_ROLES.filter(r=>todayRolesForList[r.id]===s.id);
+    const chefLabel = chefRoles.length ? ' 👑' : '';
+    html+=`<button class="user-btn ${isChef?'chef-user-btn':''}" onclick="selectUser('${s.id}')">
+      <div class="user-avatar" style="${isChef?'background:var(--gold);color:var(--green-dark)':''}">${s.initials||getInitials(s.name)}</div>
       <div>
-        <span class="user-name">${s.name}</span>
+        <span class="user-name">${s.name}${chefLabel}</span>
         <span class="user-role">${s.poste||''} · <span class="planning-shift ${getShiftClass(shift)}" style="font-size:10px;padding:1px 6px">${shift}</span></span>
       </div>
     </button>`;
@@ -509,7 +514,18 @@ function attachListeners() {
   // Rôles de shift
   listeners.push(onSnapshot(query(COL.shiftRoles(),orderBy('createdAt','asc')),snap=>{
     DB.shiftRoles=snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderStaffAvatarHeader(); renderChecklist();
+    // Rafraîchir TOUT ce qui affiche la couronne
+    renderStaffAvatarHeader();
+    renderAvatarHeader();
+    renderDashboardTeam();
+    renderChecklist();
+    // Reconstruire la liste de connexion avec les bons badges chef
+    buildUserList();
+    // Forcer re-render de la section planning si ouverte
+    if(currentStaffFilter==='planning'){
+      const el=document.getElementById('staff-list');
+      if(el) renderPlanningEditor(el);
+    }
   }));
   // Historique + rapports (direction seulement)
   if(currentUser?.isDirection) {
@@ -1091,7 +1107,8 @@ function filterStaff(f,btn){document.querySelectorAll('#page-staff .filter-btn')
 function updateStaffBadge(){const unread=DB.staffMessages.filter(m=>!m.read&&!m.archived).length;const badge=document.getElementById('staff-badge');if(!badge)return;if(unread>0){badge.textContent=unread;badge.classList.remove('hidden');}else badge.classList.add('hidden');}
 
 function renderStaffRequests(el){
-  const msgs=[...DB.staffMessages].filter(m=>!m.archived&&!m.deleted).reverse();
+  // Exclure les rapports de chef (passation) — ils ont leur propre section
+  const msgs=[...DB.staffMessages].filter(m=>!m.archived&&!m.deleted&&m.type!=='passation').reverse();
   if(!msgs.length){el.innerHTML='<div class="empty-state-sm" style="padding:20px;text-align:center">Aucune requête</div>';return;}
   el.innerHTML=msgs.map(m=>`<div class="request-item ${m.type==='problem'?'problem':m.type==='info'?'info':''}">
     <div class="request-header">
@@ -1257,21 +1274,37 @@ function renderChecklist(filter){
     html+=`<div class="checklist-section"><div class="checklist-section-title">${sec.title}</div>`;
     sec.items.forEach((item,idx)=>{
       const key=`${sec.title}-${idx}`;
-      const itemData=allChecked[key];
-      const isDone=!!itemData;
-      const doneBy=itemData?.doneBy||null;
-      const doneAt=itemData?.doneAt||null;
-      total++;if(isDone)done++;
-      const timeStr=doneAt?new Date(doneAt).getHours()+':'+String(new Date(doneAt).getMinutes()).padStart(2,'0'):'';
+      // Récupérer depuis checklistItems partagés
+      const sharedItem = DB.checklistItems?.find(i=>i.itemId===today+'-'+currentCheckFilter+'-'+key);
+      const isDone     = !!(sharedItem?.done || allChecked[key]);
+      const isChefDone = !!sharedItem?.chefDone;
+      const doneBy     = sharedItem?.doneBy || allChecked[key]?.doneBy || null;
+      const doneAt     = sharedItem?.doneAt || allChecked[key]?.doneAt || null;
+      const chefBy     = sharedItem?.chefBy || null;
+      const chefAt     = sharedItem?.chefAt || null;
+      total++; if(isDone) done++;
+      const timeStr = doneAt ? new Date(doneAt).getHours()+':'+String(new Date(doneAt).getMinutes()).padStart(2,'0') : '';
+      const chefTimeStr = chefAt ? new Date(chefAt).getHours()+':'+String(new Date(chefAt).getMinutes()).padStart(2,'0') : '';
+
+      // Couleur du bouton selon qui a validé
+      let cbClass = '';
+      let cbColor = '';
+      if(isChefDone) { cbClass='checked chef-checked'; cbColor='background:var(--gold);border-color:var(--gold);color:var(--green-dark)'; }
+      else if(isDone){ cbClass='checked'; cbColor=''; }
+
       html+=`<div class="checklist-item ${isDone?'done':''}">
-        <button class="checklist-cb ${isDone?'checked':''}" onclick="toggleChecklistItem('${key}','${currentCheckFilter}')">
+        <button class="checklist-cb ${cbClass}" style="${cbColor}" onclick="toggleChecklistItem('${key}','${currentCheckFilter}')">
           ${isDone?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}
         </button>
         <div style="flex:1">
           <span class="checklist-text ${isDone?'done':''}">${escHtml(item)}</span>
-          ${isDone&&doneBy?`<div style="font-size:11px;color:var(--green-mid);margin-top:2px">✓ ${getUserLabel(doneBy)}${timeStr?' · '+timeStr:''}</div>`:''}
+          <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">
+            ${isDone&&doneBy?`<span style="font-size:11px;color:var(--green-mid)">✓ ${getUserLabel(doneBy)}${timeStr?' · '+timeStr:''}</span>`:''}
+            ${isChefDone&&chefBy?`<span style="font-size:11px;color:var(--gold);font-weight:600">👑 ${getUserLabel(chefBy)}${chefTimeStr?' · '+chefTimeStr:''}</span>`:''}
+          </div>
         </div>
-        ${amChef&&isDone?`<button onclick="toggleChecklistItem('${key}','${currentCheckFilter}')" style="font-size:11px;color:var(--gray);padding:2px 6px;background:var(--cream-dark);border-radius:4px">✕</button>`:''}
+        ${amChef&&isDone&&!isChefDone?`<button onclick="toggleChecklistItem('${key}','${currentCheckFilter}',true)" style="font-size:11px;color:var(--gold);padding:4px 10px;background:rgba(184,151,62,.15);border-radius:6px;font-weight:600;white-space:nowrap">👑 OK</button>`:''}
+        ${amChef&&isChefDone?`<button onclick="toggleChecklistItem('${key}','${currentCheckFilter}',true)" style="font-size:11px;color:var(--gray);padding:4px 8px;background:var(--cream-dark);border-radius:6px">✕</button>`:''}
       </div>`;
     });
     html+='</div>';
@@ -1291,76 +1324,109 @@ function renderChecklist(filter){
     <div style="font-size:12px;color:var(--gray);margin-bottom:14px;text-align:center">${done} / ${total} tâches · ${total?Math.round(done/total*100):0}%</div>${html}`;
 }
 
-async function toggleChecklistItem(key,type){
-  const today=todayStr();
-  const itemId=today+'-'+type+'-'+key;
-  // Chercher si cet item existe déjà (partagé entre tous)
-  const existing=DB.checklistItems?.find(i=>i.itemId===itemId);
-  if(existing) {
-    const isDone=!existing.done;
-    await updateDoc(doc(db,'checklistItems',existing.id),{
-      done:isDone,
-      doneBy:isDone?currentUser.id:null,
-      doneAt:isDone?new Date().toISOString():null,
-      updatedAt:serverTimestamp()
-    });
+async function toggleChecklistItem(key, type, forceChefValidation) {
+  const today = todayStr();
+  const itemId = today+'-'+type+'-'+key;
+  const amChef = isChefForRole(type);
+  const existing = DB.checklistItems?.find(i=>i.itemId===itemId);
+
+  if(amChef || forceChefValidation) {
+    // Chef — toggle la validation chef
+    if(existing) {
+      const chefDone = !existing.chefDone;
+      await updateDoc(doc(db,'checklistItems',existing.id),{
+        chefDone,
+        chefBy: chefDone ? currentUser.id : null,
+        chefAt: chefDone ? new Date().toISOString() : null,
+        // Si le chef coche, marquer aussi comme fait si pas encore coché
+        done: chefDone ? true : existing.done,
+        doneBy: chefDone && !existing.done ? currentUser.id : existing.doneBy,
+        doneAt: chefDone && !existing.done ? new Date().toISOString() : existing.doneAt,
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      await addDoc(COL.checklistItems(),{
+        itemId, key, type, date:today,
+        done:true, doneBy:currentUser.id, doneAt:new Date().toISOString(),
+        chefDone:true, chefBy:currentUser.id, chefAt:new Date().toISOString(),
+        createdAt:serverTimestamp()
+      });
+    }
   } else {
-    await addDoc(COL.checklistItems(),{
-      itemId, key, type, date:today,
-      done:true, doneBy:currentUser.id,
-      doneAt:new Date().toISOString(),
-      createdAt:serverTimestamp()
-    });
+    // Membre équipe — toggle la validation simple
+    if(existing) {
+      const isDone = !existing.done;
+      await updateDoc(doc(db,'checklistItems',existing.id),{
+        done: isDone,
+        doneBy: isDone ? currentUser.id : null,
+        doneAt: isDone ? new Date().toISOString() : null,
+        // Si on décoche, retirer aussi validation chef
+        chefDone: isDone ? existing.chefDone : false,
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      await addDoc(COL.checklistItems(),{
+        itemId, key, type, date:today,
+        done:true, doneBy:currentUser.id, doneAt:new Date().toISOString(),
+        chefDone:false, chefBy:null, chefAt:null,
+        createdAt:serverTimestamp()
+      });
+    }
   }
-  // Aussi sauvegarder dans l'ancienne collection pour compatibilité
-  const oldExisting=DB.checklists.find(c=>c.userId===currentUser.id&&c.date===today&&c.type===type);
-  let items=oldExisting?.items?JSON.parse(JSON.stringify(oldExisting.items)):[];
-  const idx=items.findIndex(i=>i.key===key);
-  if(idx>=0){items[idx].done=!items[idx].done;if(items[idx].done)items[idx].doneBy=currentUser.id;}
-  else items.push({key,done:true,doneBy:currentUser.id,doneAt:new Date().toISOString()});
-  if(oldExisting)await updateDoc(doc(db,'checklists',oldExisting.id),{items,updatedAt:serverTimestamp()});
-  else await addDoc(COL.checklists(),{userId:currentUser.id,date:today,type,items,createdAt:serverTimestamp()});
 }
 async function validateShiftAsChef(roleId) {
-  const role=SHIFT_ROLES.find(r=>r.id===(roleId||currentCheckFilter));
-  const today=todayStr();
-  const sharedItems=DB.checklistItems?.filter(i=>i.date===today&&i.type===(roleId||currentCheckFilter))||[];
-  const cl=CHECKLISTS[roleId||currentCheckFilter];
-  let rapport='👑 RAPPORT '+( role?.label||'').toUpperCase()+'\n';
-  rapport+='Date : '+today+'\n';
-  rapport+='Chef : '+currentUser.name+'\n\n';
+  const role = SHIFT_ROLES.find(r=>r.id===(roleId||currentCheckFilter));
+  const today = todayStr();
+  const type  = roleId||currentCheckFilter;
+  const cl    = CHECKLISTS[type];
 
-  // Résumé par section
-  cl?.sections.forEach(sec=>{
-    rapport+=sec.title+' :\n';
-    const allChecked={};
-    DB.checklists.filter(c=>c.date===today&&c.type===(roleId||currentCheckFilter)).forEach(c=>{
-      (c.items||[]).forEach(i=>{if(i.done)allChecked[i.key]={doneBy:i.doneBy,doneAt:i.doneAt};});
-    });
-    sharedItems.forEach(i=>{if(i.done)allChecked[i.key]={doneBy:i.doneBy,doneAt:i.doneAt};});
-    sec.items.forEach((item,idx)=>{
-      const key=sec.title+'-'+idx;
-      const d=allChecked[key];
-      const time=d?.doneAt?new Date(d.doneAt).getHours()+':'+String(new Date(d.doneAt).getMinutes()).padStart(2,'0'):'';
-      rapport+=(d?'  ✓ ':'  ○ ')+item+(d?' — '+getUserLabel(d.doneBy)+(time?' à '+time:''):'')+' \n';
-    });
-    rapport+='\n';
+  // Collecter tous les items cochés
+  const allChecked = {};
+  DB.checklists.filter(c=>c.date===today&&c.type===type).forEach(c=>{
+    (c.items||[]).forEach(i=>{ if(i.done) allChecked[i.key]={doneBy:i.doneBy,doneAt:i.doneAt}; });
+  });
+  (DB.checklistItems||[]).filter(i=>i.date===today&&i.type===type&&i.done).forEach(i=>{
+    allChecked[i.key]={doneBy:i.doneBy,doneAt:i.doneAt};
   });
 
-  await addDoc(COL.staffMessages(),{
-    from:currentUser.id,
-    content:rapport,
-    type:'passation',
-    roleId:roleId||currentCheckFilter,
-    read:false,archived:false,deleted:false,replies:[],
-    createdAt:serverTimestamp()
-  });
+  // Calculer durée totale (premier item → dernier item)
+  const times = Object.values(allChecked).map(i=>i.doneAt?new Date(i.doneAt).getTime():null).filter(Boolean);
+  const dureeMin = times.length>=2 ? Math.round((Math.max(...times)-Math.min(...times))/60000) : 0;
 
-  // Sauvegarder dans dailyReports
+  // Compter tâches
+  let totalItems=0, doneItems=0;
+  cl?.sections.forEach(sec=>sec.items.forEach((_,idx)=>{
+    totalItems++;
+    if(allChecked[sec.title+'-'+idx]) doneItems++;
+  }));
+
+  // Construire données rapport structurées
+  const rapportData = {
+    role: role?.label||type,
+    chef: currentUser.name,
+    chefId: currentUser.id,
+    date: today,
+    dureeMin,
+    totalItems, doneItems,
+    sections: cl?.sections.map(sec=>({
+      title: sec.title,
+      items: sec.items.map((item,idx)=>{
+        const key=sec.title+'-'+idx;
+        const d=allChecked[key];
+        return {
+          text: item,
+          done: !!d,
+          doneBy: d?.doneBy||null,
+          doneAt: d?.doneAt||null
+        };
+      })
+    }))||[]
+  };
+
+  // Sauvegarder rapport structuré
   await addDoc(COL.dailyReports(),{
-    date:today, roleId:roleId||currentCheckFilter,
-    chefId:currentUser.id, rapport,
-    validatedAt:serverTimestamp()
+    ...rapportData,
+    validatedAt: serverTimestamp()
   });
 
   showToast('Rapport envoyé à la direction ✓');
@@ -1393,18 +1459,45 @@ function renderHistory(filter) {
   const reports=DB.dailyReports?.filter(r=>r.date===historyViewDate)||[];
   let reportHtml='';
   if(reports.length){
-    reportHtml='<div class="card-section card-gold" style="margin-bottom:12px">'
-      +'<div class="card-section-header gold"><span class="card-icon">👑</span><span class="card-title">Rapports du jour</span></div>';
+    reportHtml='<div style="margin-bottom:12px">';
     reports.forEach(r=>{
-      const role=SHIFT_ROLES.find(x=>x.id===r.roleId);
       const t=r.validatedAt?.toDate?r.validatedAt.toDate():new Date(r.validatedAt||0);
-      reportHtml+='<div style="padding:10px 0;border-bottom:1px solid var(--cream-dark)">'
-        +'<div style="font-size:13px;font-weight:600;color:var(--green-dark)">'+(role?.label||r.roleId)+'</div>'
-        +'<div style="font-size:12px;color:var(--gray)">Chef : '+getUserLabel(r.chefId)+' · '+pad(t.getHours())+':'+pad(t.getMinutes())+'</div>'
-        +'<details style="margin-top:6px"><summary style="font-size:12px;color:var(--green-mid);cursor:pointer">Voir le rapport</summary>'
-        +'<pre style="font-size:11px;color:var(--gray);white-space:pre-wrap;margin-top:6px;background:var(--cream);padding:8px;border-radius:6px">'+escHtml(r.rapport||'')+'</pre>'
-        +'</details>'
-      +'</div>';
+      const pct=r.totalItems?Math.round(r.doneItems/r.totalItems*100):0;
+      const duree=r.dureeMin?r.dureeMin+'min':'—';
+
+      // Header rapport
+      reportHtml+='<div class="rapport-card">'
+        +'<div class="rapport-header">'
+          +'<span class="rapport-icon">👑</span>'
+          +'<div class="rapport-title-block">'
+            +'<div class="rapport-title">'+(r.role||r.roleId||'Rapport')+'</div>'
+            +'<div class="rapport-meta">Chef : '+getUserLabel(r.chefId)+' · '+pad(t.getHours())+':'+pad(t.getMinutes())+'</div>'
+          +'</div>'
+          +'<div class="rapport-stats">'
+            +'<div class="rapport-stat-big">'+pct+'%</div>'
+            +'<div class="rapport-stat-small">'+r.doneItems+'/'+r.totalItems+' tâches</div>'
+            +'<div class="rapport-stat-small">⏱ '+duree+'</div>'
+          +'</div>'
+        +'</div>'
+        +'<div class="rapport-progress"><div class="rapport-progress-bar" style="width:'+pct+'%"></div></div>';
+
+      // Sections
+      if(r.sections&&r.sections.length){
+        r.sections.forEach(sec=>{
+          reportHtml+='<div class="rapport-section">'
+            +'<div class="rapport-section-title">'+escHtml(sec.title)+'</div>';
+          sec.items.forEach(item=>{
+            const time=item.doneAt?new Date(item.doneAt).getHours()+':'+String(new Date(item.doneAt).getMinutes()).padStart(2,'0'):'';
+            reportHtml+='<div class="rapport-item '+(item.done?'done':'missing')+'">'
+              +'<span class="rapport-check">'+(item.done?'✓':'○')+'</span>'
+              +'<span class="rapport-item-text">'+escHtml(item.text)+'</span>'
+              +(item.done?'<span class="rapport-item-meta">'+getUserLabel(item.doneBy)+(time?' · '+time:'')+'</span>':'')
+            +'</div>';
+          });
+          reportHtml+='</div>';
+        });
+      }
+      reportHtml+='</div>';
     });
     reportHtml+='</div>';
   }

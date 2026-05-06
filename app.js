@@ -288,7 +288,7 @@ function renderPlanningEditor(el) {
 async function onShiftChange(staffId, dayIndex, newShift) {
   await updateShiftCell(staffId, dayIndex, newShift);
   showToast('Planning mis à jour ✓');
-  // Mettre à jour le badge du jour si c'est aujourd'hui
+  // Mettre à jour le badge du jour si c'est aujourd’hui
   if (dayIndex === todayDay()) {
     renderStaffAvatarHeader();
     renderChefBadge();
@@ -788,7 +788,7 @@ function renderDashboardTeam() {
   const today = String(todayDay());
   const todayShift = weeklyPlanDoc || {};
 
-  // Trouver qui travaille aujourd'hui
+  // Trouver qui travaille aujourd’hui
   const working = dynamicStaff.filter(s => {
     const shift = weeklyPlanDoc?.[s.id]?.[today] || 'Off';
     return shift !== 'Off';
@@ -837,7 +837,7 @@ function renderDashboardTeam() {
     teamHtml += '</div></div>';
   });
 
-  el.innerHTML = teamHtml || '<div class="empty-state-sm" style="color:rgba(245,240,232,0.5)">Aucun employé aujourd'hui</div>';
+  el.innerHTML = teamHtml || '<div class="empty-state-sm" style="color:rgba(245,240,232,0.5)">Aucun employé ce jour</div>';
 }
 
 // ============================================================
@@ -945,7 +945,7 @@ function renderDashboardRapports() {
   const reports = DB.dailyReports?.filter(r=>r.date===today)||[];
   const el = document.getElementById('dashboard-rapports'); if(!el) return;
   if(!reports.length){
-    el.innerHTML='<div class="empty-state-sm">Aucun rapport aujourd'hui</div>';
+    el.innerHTML='<div class="empty-state-sm">Aucun rapport aujourd’hui</div>';
     return;
   }
   el.innerHTML = reports.map(r=>{
@@ -1336,7 +1336,7 @@ function renderChecklist(filter){
   const todayRoles=getTodayRoles();
   const chefUserId=todayRoles[currentCheckFilter];
 
-  // Récupérer tous les items cochés aujourd'hui pour ce type (tous les utilisateurs)
+  // Récupérer tous les items cochés aujourd’hui pour ce type (tous les utilisateurs)
   const sharedItems=DB.checklistItems?.filter(i=>i.date===today&&i.type===currentCheckFilter)||[];
   // Fallback sur ancienne méthode
   const allChecked={};

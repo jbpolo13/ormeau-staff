@@ -554,6 +554,7 @@ function attachListeners() {
     listeners.push(onSnapshot(query(COL.dailyReports(),orderBy('validatedAt','desc')),snap=>{
       DB.dailyReports=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderHistory();
+      renderDashboardRapports();
     }));
   }
   listeners.push(onSnapshot(query(COL.shiftChefs(),orderBy('date','desc')),snap=>{
@@ -798,36 +799,45 @@ function renderDashboardTeam() {
     return;
   }
 
-  const shiftColors = {
-    'Matin':   'background:rgba(209,250,229,0.25);border:1px solid rgba(74,140,107,0.4)',
-    'Soir':    'background:rgba(219,234,254,0.25);border:1px solid rgba(59,130,246,0.4)',
-    'Coupure': 'background:rgba(252,231,243,0.25);border:1px solid rgba(157,23,77,0.4)',
-    '10H-18H': 'background:rgba(254,243,199,0.25);border:1px solid rgba(245,158,11,0.4)',
-  };
-  const shiftTextColors = {
-    'Matin':'#065f46','Soir':'#1e40af','Coupure':'#9d174d','10H-18H':'#92400e'
-  };
   const todayRoles2 = getTodayRoles();
   const chefIds2 = Object.values(todayRoles2);
 
-  el.innerHTML = '<div class="team-day-grid">' + working.map(s => {
+  // Grouper par shift
+  const shiftGroups = {
+    'Matin':   { color:'#22c55e', bg:'rgba(34,197,94,0.18)', border:'rgba(34,197,94,0.5)', label:'🌅 Matin', members:[] },
+    'Soir':    { color:'#60a5fa', bg:'rgba(96,165,250,0.18)', border:'rgba(96,165,250,0.5)', label:'🌙 Soir', members:[] },
+    'Coupure': { color:'#f472b6', bg:'rgba(244,114,182,0.18)', border:'rgba(244,114,182,0.5)', label:'☀️ Coupure', members:[] },
+    '10H-18H': { color:'#fbbf24', bg:'rgba(251,191,36,0.18)', border:'rgba(251,191,36,0.5)', label:'⏰ 10H-18H', members:[] },
+  };
+
+  working.forEach(s => {
     const shift = weeklyPlanDoc?.[s.id]?.[today] || 'Off';
-    const isChef = chefIds2.includes(s.id);
-    const chefRolesForS = SHIFT_ROLES.filter(r=>todayRoles2[r.id]===s.id);
-    const chipStyle = shiftColors[shift] || 'background:rgba(255,255,255,0.1)';
-    const shiftStyle = 'color:'+(shiftTextColors[shift]||'rgba(245,240,232,0.6)')+';font-weight:600';
-    return '<div class="team-member-chip" style="'+chipStyle+'">'
-      + '<div class="team-chip-avatar" style="'+(isChef?'background:var(--gold);color:var(--green-dark)':'')+'">'
-        + (s.initials || getInitials(s.name))
-      + '</div>'
-      + '<div>'
-        + '<span class="team-chip-name">' + escHtml(s.name)
-          + (isChef ? ' <span class="team-chef-badge">👑</span>' : '')
-        + '</span>'
-        + '<span class="team-chip-shift" style="'+shiftStyle+'">' + shift + '</span>'
-      + '</div>'
-    + '</div>';
-  }).join('') + '</div>';
+    if(shiftGroups[shift]) shiftGroups[shift].members.push({...s, shift});
+  });
+
+  let teamHtml = '';
+  Object.values(shiftGroups).forEach(group => {
+    if(!group.members.length) return;
+    teamHtml += '<div style="margin-bottom:10px">'
+      + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:'+group.color+';margin-bottom:6px">'+group.label+'</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    group.members.forEach(s => {
+      const isChef = chefIds2.includes(s.id);
+      teamHtml += '<div class="team-member-chip" style="background:'+group.bg+';border:2px solid '+group.border+'">'
+        + '<div class="team-chip-avatar" style="background:'+(isChef?'var(--gold)':group.color)+';color:'+(isChef?'var(--green-dark)':'white')+';font-size:11px;font-weight:700">'
+          + (s.initials||getInitials(s.name))
+        + '</div>'
+        + '<div>'
+          + '<span class="team-chip-name" style="color:white;font-weight:600">' + escHtml(s.name)
+            + (isChef ? ' 👑' : '')
+          + '</span>'
+        + '</div>'
+      + '</div>';
+    });
+    teamHtml += '</div></div>';
+  });
+
+  el.innerHTML = teamHtml || '<div class="empty-state-sm" style="color:rgba(245,240,232,0.5)">Aucun employé aujourd'hui</div>';
 }
 
 // ============================================================
@@ -911,7 +921,12 @@ function renderUrgentReminders() {
 }
 
 function renderDashboardStaffRequests() {
-  const reqs=DB.staffMessages.filter(m=>!m.archived).slice(-3);
+  // Requêtes normales (pas les rapports)
+  const reqs=DB.staffMessages.filter(m=>
+    !m.archived && !m.deleted &&
+    m.type !== 'passation' &&
+    !(m.content&&m.content.includes('RAPPORT CHEF'))
+  ).slice(-3);
   const el=document.getElementById('dashboard-staff-requests'); if(!el) return;
   el.innerHTML=reqs.length?reqs.map(m=>`<div class="request-item ${m.type==='problem'?'problem':m.type==='info'?'info':''}">
     <div class="request-header">
@@ -922,6 +937,38 @@ function renderDashboardStaffRequests() {
     <div class="request-text">${escHtml(m.content)}</div>
     <div class="request-time">${formatDateTime(m.createdAt)}</div>
   </div>`).join(''):'<div class="empty-state-sm">Aucune requête en attente</div>';
+}
+
+function renderDashboardRapports() {
+  // Rapports du jour dans section séparée
+  const today = todayStr();
+  const reports = DB.dailyReports?.filter(r=>r.date===today)||[];
+  const el = document.getElementById('dashboard-rapports'); if(!el) return;
+  if(!reports.length){
+    el.innerHTML='<div class="empty-state-sm">Aucun rapport aujourd'hui</div>';
+    return;
+  }
+  el.innerHTML = reports.map(r=>{
+    let totalItems=r.totalItems||0, doneItems=r.doneItems||0;
+    if(!totalItems&&r.sections) r.sections.forEach(s=>{totalItems+=s.items?.length||0;doneItems+=s.items?.filter(i=>i.done).length||0;});
+    const pct=totalItems?Math.round(doneItems/totalItems*100):0;
+    const t=r.validatedAt?.toDate?r.validatedAt.toDate():new Date(r.validatedAt||0);
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--cream-dark)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div>'
+          +'<div style="font-size:13px;font-weight:600;color:var(--green-dark)">'+escHtml(r.role||r.roleId||'Rapport')+'</div>'
+          +'<div style="font-size:11px;color:var(--gray)">👑 '+getUserLabel(r.chefId)+' · '+pad(t.getHours())+':'+pad(t.getMinutes())+'</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+          +'<div style="font-size:18px;font-weight:700;color:var(--green-dark)">'+pct+'%</div>'
+          +'<div style="font-size:11px;color:var(--gray)">'+doneItems+'/'+totalItems+'</div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="height:4px;background:var(--cream-dark);border-radius:2px;margin-top:6px;overflow:hidden">'
+        +'<div style="height:100%;width:'+pct+'%;background:var(--green-light);border-radius:2px"></div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
 }
 
 // ============================================================
@@ -1751,4 +1798,5 @@ window.openEditSupplier   = openEditSupplier;
 window.saveEditSupplier   = saveEditSupplier;
 window.renderDashboardTeam= renderDashboardTeam;
 window.renderDashboard    = renderDashboard;
+window.renderDashboardRapports = renderDashboardRapports;
 window.archiveOldRapports = archiveOldRapports;
